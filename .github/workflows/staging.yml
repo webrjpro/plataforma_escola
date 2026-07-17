@@ -29,7 +29,7 @@ jobs:
     env:
       RESTORE_SOURCE_DATABASE_URL: ${{ secrets.RESTORE_SOURCE_DATABASE_URL }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Require restore source secret
         shell: bash
         run: |
@@ -48,7 +48,7 @@ jobs:
       STAGING_BASE_URL: ${{ inputs.staging_base_url || secrets.STAGING_BASE_URL }}
       STAGING_API_URL: ${{ inputs.staging_api_url || secrets.STAGING_API_URL }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: 22
@@ -90,7 +90,7 @@ jobs:
       E2E_STUDENT_LOGIN: ${{ secrets.E2E_STUDENT_LOGIN }}
       E2E_STUDENT_PASSWORD: ${{ secrets.E2E_STUDENT_PASSWORD }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: 22
