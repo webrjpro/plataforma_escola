@@ -1,112 +1,70 @@
+name: eduvault
+
 x-default-logging: &default-logging
   driver: json-file
   options:
     max-size: "10m"
     max-file: "3"
 
-x-container-hardening: &container-hardening
-  read_only: true
-  security_opt:
-    - no-new-privileges:true
-  cap_drop:
-    - ALL
-
 services:
-  uploads-init:
-    image: alpine:3.22
-    user: "0:0"
-    command:
-      - sh
-      - -ec
-      - >-
-        mkdir -p /uploads/videos /uploads/hls /uploads/images /uploads/pdfs;
-        chown 1000:1000 /uploads /uploads/videos /uploads/hls /uploads/images /uploads/pdfs
-    network_mode: none
-    read_only: true
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    cap_add:
-      - CHOWN
-      - DAC_OVERRIDE
-      - FOWNER
-    volumes:
-      - eduvault_uploads:/uploads
-    restart: "no"
-    logging: *default-logging
-
-  db:
+  postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-eduvault}
       POSTGRES_USER: ${POSTGRES_USER:-eduvault}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-eduvault123}
-      TZ: America/Sao_Paulo
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
     ports:
       - "127.0.0.1:${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     security_opt:
       - no-new-privileges:true
-    tmpfs:
-      - /tmp:size=64m,mode=1777
-    networks:
-      - eduvault-net
     logging: *default-logging
 
-  backend:
-    <<: *container-hardening
+  app:
     build:
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
-    init: true
     restart: unless-stopped
     depends_on:
-      uploads-init:
-        condition: service_completed_successfully
-      db:
+      postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-eduvault}:${POSTGRES_PASSWORD:-eduvault123}@db:5432/${POSTGRES_DB:-eduvault}?connection_limit=20
-      MIGRATION_MODE: ${MIGRATION_MODE:-deploy}
-      JWT_SECRET: ${JWT_SECRET:-troque-este-jwt-secret-em-producao}
-      TRUST_PROXY: "1"
-      COOKIE_SECURE: "false"
-      AUTH_TTL_HOURS: ${AUTH_TTL_HOURS:-8}
-      PORT: 4000
-      NODE_ENV: ${NODE_ENV:-development}
-      TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
-      APP_TIMEZONE: ${APP_TIMEZONE:-America/Sao_Paulo}
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-eduvault}:${POSTGRES_PASSWORD:-eduvault123}@postgres:5432/${POSTGRES_DB:-eduvault}?connection_limit=20
+      JWT_SECRET: ${JWT_SECRET:-local-development-secret-with-at-least-32-characters}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
-      VIDEO_STORAGE_PATH: /app/uploads/videos
-      HLS_STORAGE_PATH: /app/uploads/hls
-      IMAGE_STORAGE_PATH: /app/uploads/images
-      PDF_STORAGE_PATH: /app/uploads/pdfs
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      AUTH_TTL_HOURS: ${AUTH_TTL_HOURS:-8}
+      MIGRATION_MODE: ${MIGRATION_MODE:-deploy}
+      APP_TIMEZONE: ${APP_TIMEZONE:-America/Sao_Paulo}
+      PLATFORM_NAME: ${PLATFORM_NAME:-EduVault}
       PGBOSS_WORKER: "false"
+      SEED_ON_START: ${SEED_ON_START:-false}
+      ADMIN_INITIAL_EMAIL: ${ADMIN_INITIAL_EMAIL:-}
+      ADMIN_INITIAL_USERNAME: ${ADMIN_INITIAL_USERNAME:-}
+      ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:-}
+      ADMIN_INITIAL_NAME: ${ADMIN_INITIAL_NAME:-Administrador da Plataforma}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-}
       SMTP_SECURE: ${SMTP_SECURE:-false}
-      PLATFORM_NAME: ${PLATFORM_NAME:-EduVault}
-      SEED_ON_START: ${SEED_ON_START:-false}
-      ADMIN_INITIAL_EMAIL: ${ADMIN_INITIAL_EMAIL:-}
-      ADMIN_INITIAL_USERNAME: ${ADMIN_INITIAL_USERNAME:-}
-      ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:-}
-      ADMIN_INITIAL_NAME: ${ADMIN_INITIAL_NAME:-}
-      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
-      DEMO_STUDENT_PASSWORD: ${DEMO_STUDENT_PASSWORD:-}
-      BROADCAST_INTERNAL_URL: http://broadcast:8080
       RTMP_STREAM_KEY: ${RTMP_STREAM_KEY:-1111111111111111111111111111111111111111111111111111111111111111}
       LOOP_STREAM_KEY: ${LOOP_STREAM_KEY:-2222222222222222222222222222222222222222222222222222222222222222}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_BUCKET: ${R2_BUCKET:-}
+      R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODEL: ${GROQ_MODEL:-meta-llama/llama-4-scout-17b-16e-instruct}
       GROQ_FALLBACK_MODEL: ${GROQ_FALLBACK_MODEL:-openai/gpt-oss-120b}
@@ -115,151 +73,22 @@ services:
       GROQ_MAX_TOKENS: ${GROQ_MAX_TOKENS:-1200}
       AI_RATE_LIMIT_MAX: ${AI_RATE_LIMIT_MAX:-20}
       AI_RATE_LIMIT_WINDOW_MS: ${AI_RATE_LIMIT_WINDOW_MS:-900000}
-    volumes:
-      - eduvault_uploads:/app/uploads
-    tmpfs:
-      - /tmp:size=256m,mode=1777
     ports:
-      - "127.0.0.1:${API_PORT:-4000}:4000"
-    healthcheck:
-      test: ["CMD", "node", "-e", "const http=require('http');http.get('http://127.0.0.1:4000/health/ready',r=>{r.resume();process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1));"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-    stop_grace_period: 45s
-    networks:
-      - eduvault-net
-      - broadcast-net
-    logging: *default-logging
-
-  video-worker:
-    <<: *container-hardening
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    init: true
-    restart: unless-stopped
-    depends_on:
-      uploads-init:
-        condition: service_completed_successfully
-      backend:
-        condition: service_healthy
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-eduvault}:${POSTGRES_PASSWORD:-eduvault123}@db:5432/${POSTGRES_DB:-eduvault}?connection_limit=5
-      NODE_ENV: ${NODE_ENV:-development}
-      PROCESS_ROLE: worker
-      RUN_MIGRATIONS: "false"
-      VIDEO_STORAGE_PATH: /app/uploads/videos
-      HLS_STORAGE_PATH: /app/uploads/hls
-    volumes:
-      - eduvault_uploads:/app/uploads
-    tmpfs:
-      - /tmp:size=256m,mode=1777
-    stop_grace_period: 45s
-    networks:
-      - eduvault-net
-    logging: *default-logging
-
-  broadcast:
-    <<: *container-hardening
-    build:
-      context: ./broadcast
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    depends_on:
-      backend:
-        condition: service_healthy
-    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-5173}:8080"
       - "127.0.0.1:${RTMP_PORT:-1935}:1935"
-    expose:
-      - "8080"
-    tmpfs:
-      - /tmp:size=16m,mode=1777
-      - /var/cache/nginx/hls:size=256m,mode=1777
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health/live"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 5s
-    stop_grace_period: 15s
-    networks:
-      - broadcast-net
-      - broadcast-edge-net
-    logging: *default-logging
-
-  broadcast-loop:
-    <<: *container-hardening
-    profiles: ["broadcast-loop"]
-    build:
-      context: ./broadcast
-      dockerfile: Dockerfile.streamer
-    init: false
-    restart: unless-stopped
-    depends_on:
-      broadcast:
-        condition: service_healthy
-      uploads-init:
-        condition: service_completed_successfully
-    environment:
-      LOOP_STREAM_KEY: ${LOOP_STREAM_KEY:-2222222222222222222222222222222222222222222222222222222222222222}
-      VIDEO_DIRECTORY: /media/videos
-      PLAYLIST_FILE: /playlists/playlist.txt
-      RTMP_HOST: broadcast
-      RTMP_PORT: 1935
-      RTMP_APPLICATION: live
-      LOOP_STREAM_NAME: loop
-      BROADCAST_HEALTH_URL: http://broadcast:8080/health/live
     volumes:
-      - eduvault_uploads:/media:ro
-      - ./broadcast/playlist.txt:/playlists/playlist.txt:ro
-    tmpfs:
-      - /tmp:size=64m,mode=1777
-    stop_grace_period: 20s
-    networks:
-      - broadcast-net
-    logging: *default-logging
-
-  frontend:
-    <<: *container-hardening
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL:-}
-        NGINX_CONF: nginx.docker.conf
-        LISTEN_PORT: "5173"
-    restart: unless-stopped
-    depends_on:
-      backend:
-        condition: service_healthy
-      broadcast:
-        condition: service_healthy
-    ports:
-      - "127.0.0.1:${FRONTEND_PORT:-5173}:5173"
-    tmpfs:
-      - /tmp:size=16m,mode=1777,uid=101,gid=101
-      - /var/cache/nginx:size=64m,mode=1777,uid=101,gid=101
-      - /var/run:size=1m,mode=1777,uid=101,gid=101
+      - app_data:/data
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:5173/health/live"]
+      test: ["CMD", "node", "-e", "const http=require('http');http.get('http://127.0.0.1:8080/health/ready',r=>{r.resume();process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1));"]
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 10s
-    stop_grace_period: 15s
-    networks:
-      - eduvault-net
-      - broadcast-net
+      start_period: 45s
+    stop_grace_period: 45s
+    security_opt:
+      - no-new-privileges:true
     logging: *default-logging
 
 volumes:
   postgres_data:
-  eduvault_uploads:
-
-networks:
-  eduvault-net:
-  broadcast-net:
-    internal: true
-  broadcast-edge-net:
+  app_data:

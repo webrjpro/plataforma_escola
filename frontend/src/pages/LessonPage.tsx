@@ -74,7 +74,7 @@ function trustedQrUrl(value: unknown): string {
 
 export default function LessonPage() {
     const { videoId } = useParams<{ videoId: string }>();
-    const { token, user } = useAuth();
+    const { user } = useAuth();
     const { config } = useConfig();
     const navigate = useNavigate();
 
@@ -98,9 +98,7 @@ export default function LessonPage() {
             try {
                 setLoading(true);
                 setError(null);
-                const response = await api.get(`/api/student/lesson/${videoId}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const response = await api.get(`/api/student/lesson/${videoId}`);
                 setLesson(response.data);
             } catch (err: unknown) {
                 console.error('Erro ao buscar aula', err);
@@ -113,8 +111,8 @@ export default function LessonPage() {
                 setLoading(false);
             }
         };
-        if (token && videoId) fetchLesson();
-    }, [token, videoId]);
+        if (videoId) fetchLesson();
+    }, [videoId]);
 
     const notesStorageKey = user?.id && videoId ? `eduvault_notes_${user.id}_${videoId}` : null;
 
@@ -127,9 +125,7 @@ export default function LessonPage() {
     useEffect(() => {
         const fetchQuiz = async () => {
             try {
-                const response = await api.get(`/api/student/lesson/${videoId}/quiz`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const response = await api.get(`/api/student/lesson/${videoId}/quiz`);
                 setQuiz(response.data || []);
                 setQuizAnswers({});
                 setQuizResult(null);
@@ -137,17 +133,15 @@ export default function LessonPage() {
                 setQuiz([]);
             }
         };
-        if (token && videoId) fetchQuiz();
-    }, [token, videoId]);
+        if (videoId) fetchQuiz();
+    }, [videoId]);
 
     // Fetch live class for current course
     useEffect(() => {
-        if (!lesson || !token) return;
+        if (!lesson) return;
         const fetchLive = async () => {
             try {
-                const res = await api.get(`/api/student/live-classes/${lesson.module.course.id}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const res = await api.get(`/api/student/live-classes/${lesson.module.course.id}`);
                 const upcoming = (res.data as LiveClassData[]).find(
                     (item) => item.status === 'LIVE' || item.status === 'SCHEDULED'
                 );
@@ -155,7 +149,7 @@ export default function LessonPage() {
             } catch { /* ignore */ }
         };
         fetchLive();
-    }, [lesson, token]);
+    }, [lesson]);
 
     const handleSaveNotes = () => {
         if (notesStorageKey) {
@@ -177,9 +171,7 @@ export default function LessonPage() {
         if (!lesson) return;
         setCertLoading(true);
         try {
-            const res = await api.get(`/api/student/certificate/${lesson.module.course.id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.get(`/api/student/certificate/${lesson.module.course.id}`);
             const { studentName, courseName, completedAt, totalLessons, certificateCode, verifyUrl, qrUrl } = res.data;
             const date = new Date(completedAt).toLocaleDateString('pt-BR');
             const safeStudentName = escapeCertificateHtml(studentName);
@@ -243,8 +235,6 @@ export default function LessonPage() {
             setQuizLoading(true);
             const res = await api.post(`/api/student/lesson/${videoId}/quiz-attempt`, {
                 answers: quizAnswers
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
             });
             setQuizResult(res.data);
         } catch {
@@ -258,7 +248,6 @@ export default function LessonPage() {
         setDownloading(resourceUrl);
         try {
             const response = await api.get(resourceUrl, {
-                headers: { Authorization: `Bearer ${token}` },
                 responseType: 'blob'
             });
             const objectUrl = window.URL.createObjectURL(response.data as Blob);

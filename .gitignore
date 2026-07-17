@@ -11,7 +11,7 @@ frontend/dist/
 coverage/
 *.tsbuildinfo
 
-# Logs (PM2 e aplicação)
+# Logs da aplicação
 logs/
 *.log
 
@@ -22,14 +22,10 @@ logs/
 .env.prod
 .env.production
 !.env.example
-!.env.prod.example
 !backend/.env.example
 
 # Uploads (dados do usuário — não versionar)
 backend/uploads/
-
-# PM2
-.pm2/
 
 # Sistema
 .DS_Store

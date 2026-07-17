@@ -46,7 +46,7 @@ import { resolveMediaUrl } from '../lib/urls';
 import './AdminDashboard.css';
 
 export default function AdminDashboard() {
-    const { token, user, logout, login: doLogin } = useAuth();
+    const { user, logout, login: doLogin } = useAuth();
     const { config } = useConfig();
     const isTeacher = user?.role === 'TEACHER';
     const [activeTab, setActiveTab] = useState<AdminTab>(isTeacher ? 'courses' : 'overview');
@@ -168,16 +168,15 @@ export default function AdminDashboard() {
 
     const fetchData = useCallback(async () => {
         try {
-            const headers = { Authorization: `Bearer ${token}` };
             if (activeTab === 'overview') {
                 const [statsRes, usersRes, coursesRes, auditRes, healthRes, reportsRes, liveRes] = await Promise.all([
-                    api.get('/api/admin/stats', { headers }),
-                    api.get('/api/admin/users', { headers, params: { page: 1, limit: 100 } }),
-                    api.get('/api/admin/courses', { headers }),
-                    api.get('/api/admin/audit-log', { headers, params: { page: 1, limit: 8 } }),
-                    api.get('/api/admin/health', { headers }),
-                    api.get('/api/admin/reports', { headers }),
-                    api.get('/api/admin/live-classes', { headers })
+                    api.get('/api/admin/stats'),
+                    api.get('/api/admin/users', { params: { page: 1, limit: 100 } }),
+                    api.get('/api/admin/courses'),
+                    api.get('/api/admin/audit-log', { params: { page: 1, limit: 8 } }),
+                    api.get('/api/admin/health'),
+                    api.get('/api/admin/reports'),
+                    api.get('/api/admin/live-classes')
                 ]);
                 setStats(statsRes.data);
                 setUsers(usersRes.data.data);
@@ -188,24 +187,24 @@ export default function AdminDashboard() {
                 setReports(reportsRes.data);
                 setLiveClasses(liveRes.data);
             } else if (activeTab === 'users') {
-                const res = await api.get('/api/admin/users', { headers, params: { page: userPage, limit: 50, search: userSearch } });
+                const res = await api.get('/api/admin/users', { params: { page: userPage, limit: 50, search: userSearch } });
                 setUsers(res.data.data);
                 setUserTotalPages(res.data.totalPages);
                 setUserTotal(res.data.total);
             } else if (activeTab === 'courses') {
                 if (isTeacher) {
-                    const coursesRes = await api.get('/api/admin/courses', { headers });
+                    const coursesRes = await api.get('/api/admin/courses');
                     setCourses(coursesRes.data.data);
                 } else {
                     const [coursesRes, usersRes] = await Promise.all([
-                        api.get('/api/admin/courses', { headers }),
-                        api.get('/api/admin/users', { headers, params: { limit: 100 } })
+                        api.get('/api/admin/courses'),
+                        api.get('/api/admin/users', { params: { limit: 100 } })
                     ]);
                     setCourses(coursesRes.data.data);
                     setUsers(usersRes.data.data);
                 }
             } else if (activeTab === 'settings') {
-                const res = await api.get('/api/admin/config', { headers });
+                const res = await api.get('/api/admin/config');
                 setBrandingForm({
                     platformName: res.data.platformName || 'EduVault',
                     namePart1: res.data.namePart1 || 'Edu',
@@ -219,37 +218,37 @@ export default function AdminDashboard() {
                 });
             } else if (activeTab === 'audit') {
                 const [auditRes, healthRes] = await Promise.all([
-                    api.get('/api/admin/audit-log', { headers, params: { page: auditPage, limit: 50 } }),
-                    api.get('/api/admin/health', { headers })
+                    api.get('/api/admin/audit-log', { params: { page: auditPage, limit: 50 } }),
+                    api.get('/api/admin/health')
                 ]);
                 setAuditLogs(auditRes.data.data);
                 setAuditTotalPages(auditRes.data.totalPages);
                 setHealthData(healthRes.data);
             } else if (activeTab === 'reports') {
-                const res = await api.get('/api/admin/reports', { headers });
+                const res = await api.get('/api/admin/reports');
                 setReports(res.data);
             } else if (activeTab === 'notifications') {
-                const res = await api.get('/api/admin/email/status', { headers });
+                const res = await api.get('/api/admin/email/status');
                 setEmailStatus(res.data);
             } else if (activeTab === 'live') {
                 const [liveRes, coursesRes] = await Promise.all([
-                    api.get('/api/admin/live-classes', { headers }),
-                    api.get('/api/admin/courses', { headers })
+                    api.get('/api/admin/live-classes'),
+                    api.get('/api/admin/courses')
                 ]);
                 setLiveClasses(liveRes.data);
                 setCourses(coursesRes.data.data);
             } else if (activeTab === 'moderation') {
-                const res = await api.get('/api/admin/comments/flagged', { headers, params: { page: flaggedPage, limit: 20 } });
+                const res = await api.get('/api/admin/comments/flagged', { params: { page: flaggedPage, limit: 20 } });
                 setFlaggedComments(res.data.comments);
                 setFlaggedTotal(res.data.total);
                 setFlaggedTotalPages(res.data.totalPages);
             } else if (activeTab === 'punishment') {
                 const [violRes, bansRes, appealsRes, configRes, usersRes] = await Promise.all([
-                    api.get('/api/admin/violations', { headers }),
-                    api.get('/api/admin/bans', { headers }),
-                    api.get('/api/admin/appeals', { headers, params: { status: appealFilter } }),
-                    api.get('/api/admin/config', { headers }),
-                    api.get('/api/admin/users', { headers, params: { limit: 200 } })
+                    api.get('/api/admin/violations'),
+                    api.get('/api/admin/bans'),
+                    api.get('/api/admin/appeals', { params: { status: appealFilter } }),
+                    api.get('/api/admin/config'),
+                    api.get('/api/admin/users', { params: { limit: 200 } })
                 ]);
                 setViolations(violRes.data);
                 setBans(bansRes.data);
@@ -258,8 +257,8 @@ export default function AdminDashboard() {
                 setUsers(usersRes.data.data);
             } else if (activeTab === 'attendance') {
                 const [coursesRes, configRes] = await Promise.all([
-                    api.get('/api/admin/courses', { headers }),
-                    api.get('/api/admin/config', { headers })
+                    api.get('/api/admin/courses'),
+                    api.get('/api/admin/config')
                 ]);
                 setCourses(coursesRes.data.data);
                 setAttendanceConfig({
@@ -271,19 +270,17 @@ export default function AdminDashboard() {
                 // Se já existe filtro, buscar presenças
                 if (attendanceFilter.moduleId && attendanceFilter.date) {
                     const attRes = await api.get('/api/admin/attendance', {
-                        headers,
                         params: { moduleId: attendanceFilter.moduleId, date: attendanceFilter.date }
                     });
                     setAttendanceData(attRes.data);
                 }
             }
         } catch (error) { console.error('Error fetching admin data', error); }
-    }, [token, activeTab, userPage, userSearch, auditPage, flaggedPage, appealFilter, isTeacher, attendanceFilter.moduleId, attendanceFilter.date]);
+    }, [activeTab, userPage, userSearch, auditPage, flaggedPage, appealFilter, isTeacher, attendanceFilter.moduleId, attendanceFilter.date]);
 
     useEffect(() => {
-        if (!token) return;
         fetchData();
-    }, [token, activeTab, fetchData]);
+    }, [activeTab, fetchData]);
 
     // Reseta página ao mudar a busca de usuários
     useEffect(() => {
@@ -300,7 +297,7 @@ export default function AdminDashboard() {
     const handleCreateUser = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const response = await api.post('/api/admin/users', newUser, { headers: { Authorization: `Bearer ${token}` } });
+            const response = await api.post('/api/admin/users', newUser);
             setNewUser({ name: '', email: '', password: '', role: 'STUDENT' });
             fetchData();
             const delivery = response.data.emailDelivery;
@@ -320,7 +317,7 @@ export default function AdminDashboard() {
 
     const handleDeleteUser = async (id: string) => {
         try {
-            await api.delete(`/api/admin/users/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+            await api.delete(`/api/admin/users/${id}`);
             fetchData();
         } catch { alert('Erro ao deletar'); }
     };
@@ -329,7 +326,7 @@ export default function AdminDashboard() {
         try {
             const payload = buildUserUpdatePayload(targetUser, editUserData);
             if (Object.keys(payload).length > 0) {
-                await api.put(`/api/admin/users/${targetUser.id}`, payload, { headers: { Authorization: `Bearer ${token}` } });
+                await api.put(`/api/admin/users/${targetUser.id}`, payload);
                 await fetchData();
             }
             setEditingUserId(null);
@@ -343,7 +340,7 @@ export default function AdminDashboard() {
     const handleCreateCourse = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await api.post('/api/admin/courses', newCourse, { headers: { Authorization: `Bearer ${token}` } });
+            await api.post('/api/admin/courses', newCourse);
             setNewCourse({ name: '', description: '', thumbnailUrl: '' });
             fetchData();
             alert('Curso criado com sucesso!');
@@ -352,7 +349,7 @@ export default function AdminDashboard() {
 
     const handleDeleteCourse = async (id: string) => {
         try {
-            await api.delete(`/api/admin/courses/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+            await api.delete(`/api/admin/courses/${id}`);
             fetchData();
         } catch { alert('Erro ao deletar curso'); }
     };
@@ -360,7 +357,7 @@ export default function AdminDashboard() {
     const handleCreateModule = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await api.post('/api/admin/modules', newModule, { headers: { Authorization: `Bearer ${token}` } });
+            await api.post('/api/admin/modules', newModule);
             setNewModule({ courseId: '', name: '' });
             fetchData();
             alert('Módulo criado com sucesso!');
@@ -369,7 +366,7 @@ export default function AdminDashboard() {
 
     const handleDeleteModule = async (id: string) => {
         try {
-            await api.delete(`/api/admin/modules/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+            await api.delete(`/api/admin/modules/${id}`);
             fetchData();
         } catch { alert('Erro ao deletar módulo'); }
     };
@@ -390,9 +387,6 @@ export default function AdminDashboard() {
             setUploading(true);
             setUploadProgress(0);
             await api.post('/api/videos/upload', formData, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                },
                 onUploadProgress: (progressEvent) => {
                     if (progressEvent.total) {
                         setUploadProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
@@ -416,7 +410,7 @@ export default function AdminDashboard() {
 
     const handleDeleteVideo = async (id: string) => {
         try {
-            await api.delete(`/api/admin/videos/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+            await api.delete(`/api/admin/videos/${id}`);
             fetchData();
         } catch { alert('Erro ao deletar vídeo'); }
     };
@@ -429,7 +423,7 @@ export default function AdminDashboard() {
                 courseId,
                 userId: enrollmentData.userId,
                 enrollmentRole: enrollmentData.enrollmentRole || 'STUDENT'
-            }, { headers: { Authorization: `Bearer ${token}` } });
+            });
             setEnrollmentData({ courseId: '', userId: '', enrollmentRole: 'STUDENT' });
             fetchData();
             alert('Matrícula realizada com sucesso!');
@@ -444,7 +438,7 @@ export default function AdminDashboard() {
 
     const handleEnrollAllStudents = async (courseId: string) => {
         try {
-            const res = await api.post('/api/admin/enrollments/all', { courseId }, { headers: { Authorization: `Bearer ${token}` } });
+            const res = await api.post('/api/admin/enrollments/all', { courseId });
             fetchData();
             alert(`${res.data.enrolled} aluno(s) matriculado(s) com sucesso!`);
         } catch (err: unknown) {
@@ -458,7 +452,7 @@ export default function AdminDashboard() {
 
     const handleRemoveEnrollment = async (enrollmentId: string) => {
         try {
-            await api.delete(`/api/admin/enrollments/${enrollmentId}`, { headers: { Authorization: `Bearer ${token}` } });
+            await api.delete(`/api/admin/enrollments/${enrollmentId}`);
             fetchData();
         } catch { alert('Erro ao remover matrícula'); }
     };
@@ -469,9 +463,7 @@ export default function AdminDashboard() {
         formData.append('image', file);
         try {
             setUploadingImage(true);
-            const res = await api.post('/api/admin/upload-image', formData, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.post('/api/admin/upload-image', formData);
             return res.data.url;
         } catch {
             alert('Erro ao fazer upload de imagem');
@@ -491,9 +483,7 @@ export default function AdminDashboard() {
         const formData = new FormData();
         formData.append('pdf', file);
         try {
-            const res = await api.post('/api/admin/upload-pdf', formData, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.post('/api/admin/upload-pdf', formData);
             return res.data.url;
         } catch {
             alert('Erro ao fazer upload do PDF');
@@ -504,34 +494,26 @@ export default function AdminDashboard() {
     const handleUploadModulePdf = async (moduleId: string, file: File) => {
         const url = await handlePdfUpload(file);
         if (url) {
-            await api.put(`/api/admin/modules/${moduleId}`, { pdfUrl: url }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.put(`/api/admin/modules/${moduleId}`, { pdfUrl: url });
             fetchData();
         }
     };
 
     const handleRemoveModulePdf = async (moduleId: string) => {
-        await api.put(`/api/admin/modules/${moduleId}`, { pdfUrl: null }, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
+        await api.put(`/api/admin/modules/${moduleId}`, { pdfUrl: null });
         fetchData();
     };
 
     const handleUploadCalendar = async (courseId: string, file: File) => {
         const url = await handlePdfUpload(file);
         if (url) {
-            await api.put(`/api/admin/courses/${courseId}`, { calendarUrl: url }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.put(`/api/admin/courses/${courseId}`, { calendarUrl: url });
             fetchData();
         }
     };
 
     const handleRemoveCalendar = async (courseId: string) => {
-        await api.put(`/api/admin/courses/${courseId}`, { calendarUrl: null }, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
+        await api.put(`/api/admin/courses/${courseId}`, { calendarUrl: null });
         fetchData();
     };
 
@@ -539,9 +521,7 @@ export default function AdminDashboard() {
     const handleEditVideo = async (videoId: string) => {
         try {
             const contentToSave = editBlocks.length > 0 ? JSON.stringify(editBlocks) : editVideoData.content;
-            await api.put(`/api/admin/videos/${videoId}`, { ...editVideoData, content: contentToSave }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.put(`/api/admin/videos/${videoId}`, { ...editVideoData, content: contentToSave });
             setEditingVideoId(null);
             setEditVideoData({ title: '', description: '', content: '' });
             setEditBlocks([]);
@@ -567,9 +547,7 @@ export default function AdminDashboard() {
         try {
             const formData = new FormData();
             formData.append('file', file);
-            const res = await api.post('/api/admin/upload-students-excel', formData, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.post('/api/admin/upload-students-excel', formData);
             setExcelResults(res.data.results);
             setExcelEmailDelivery(res.data.emailDelivery || null);
             fetchData();
@@ -587,9 +565,7 @@ export default function AdminDashboard() {
     // Reprocess video with ERROR status
     const handleReprocessVideo = async (videoId: string) => {
         try {
-            await api.post(`/api/admin/videos/${videoId}/reprocess`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.post(`/api/admin/videos/${videoId}/reprocess`, {});
             fetchData();
             alert('Vídeo reenfileirado para processamento!');
         } catch (err: unknown) {
@@ -606,7 +582,6 @@ export default function AdminDashboard() {
     const handleExportStudents = async () => {
         try {
             const res = await api.get('/api/admin/export-students', {
-                headers: { Authorization: `Bearer ${token}` },
                 responseType: 'blob'
             });
             const url = window.URL.createObjectURL(new Blob([res.data]));
@@ -622,9 +597,7 @@ export default function AdminDashboard() {
         e.preventDefault();
         if (!notifForm.title || !notifForm.message) return;
         try {
-            const res = await api.post('/api/admin/notifications', notifForm, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.post('/api/admin/notifications', notifForm);
             setNotificationFeedback(res.data.message);
             setNotifForm({ title: '', message: '' });
         } catch { setNotificationFeedback('Não foi possível registrar a notificação.'); }
@@ -635,9 +608,7 @@ export default function AdminDashboard() {
         e.preventDefault();
         if (!liveForm.courseId || !liveForm.title || !liveForm.startAt || !liveForm.zoomJoinUrl) return;
         try {
-            await api.post('/api/admin/live-classes', liveForm, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.post('/api/admin/live-classes', liveForm);
             setLiveForm({ courseId: '', moduleId: '', title: '', description: '', startAt: '', endAt: '', zoomJoinUrl: '', zoomStartUrl: '', zoomMeetingId: '' });
             fetchData();
         } catch { alert('Erro ao criar aula ao vivo.'); }
@@ -645,9 +616,7 @@ export default function AdminDashboard() {
 
     const handleUpdateLive = async (id: string) => {
         try {
-            await api.put(`/api/admin/live-classes/${id}`, { status: editingLiveStatus }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.put(`/api/admin/live-classes/${id}`, { status: editingLiveStatus });
             setEditingLiveId(null);
             setEditingLiveStatus('');
             fetchData();
@@ -659,9 +628,7 @@ export default function AdminDashboard() {
             message: `Remover aula ao vivo "${title}"?`,
             action: async () => {
                 try {
-                    await api.delete(`/api/admin/live-classes/${id}`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
+                    await api.delete(`/api/admin/live-classes/${id}`);
                     fetchData();
                 } catch { alert('Erro ao remover aula ao vivo.'); }
             }
@@ -679,9 +646,7 @@ export default function AdminDashboard() {
             return { id: c.id, order: i };
         });
         try {
-            await api.put('/api/admin/courses/reorder', { orders }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.put('/api/admin/courses/reorder', { orders });
             fetchData();
         } catch { alert('Erro ao reordenar.'); }
     };
@@ -692,12 +657,7 @@ export default function AdminDashboard() {
             setBrandingLoading(true);
             setBrandingMsg(null);
 
-            const headers = {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            };
-
-            await api.put('/api/admin/config', brandingForm, { headers });
+            await api.put('/api/admin/config', brandingForm);
 
             setBrandingMsg({ type: 'success', text: 'Branding global atualizado! Recarregue a página para ver os efeitos.' });
 
@@ -717,9 +677,7 @@ export default function AdminDashboard() {
         const formData = new FormData();
         formData.append('image', e.target.files[0]);
         try {
-            const res = await api.post('/api/admin/upload-image', formData, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.post('/api/admin/upload-image', formData);
             setBrandingForm({ ...brandingForm, logoUrl: res.data.url });
         } catch {
             alert('Erro ao fazer upload da logo.');
@@ -734,9 +692,7 @@ export default function AdminDashboard() {
         const formData = new FormData();
         formData.append('image', e.target.files[0]);
         try {
-            const res = await api.post('/api/admin/upload-image', formData, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.post('/api/admin/upload-image', formData);
             setBrandingForm({ ...brandingForm, bannerUrl: res.data.url });
         } catch {
             alert('Erro ao fazer upload do banner.');
@@ -773,12 +729,10 @@ export default function AdminDashboard() {
                 payload.newPassword = settingsForm.newPassword;
             }
 
-            const res = await api.put('/api/auth/profile', payload, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.put('/api/auth/profile', payload);
 
-            // Atualizar token e user no contexto
-            doLogin(res.data.token, res.data.user);
+            // Atualizar o usuário autenticado no contexto
+            doLogin(res.data.user);
 
             setSettingsForm(prev => ({
                 ...prev,
@@ -803,7 +757,6 @@ export default function AdminDashboard() {
         if (!attendanceFilter.moduleId || !attendanceFilter.date) return;
         try {
             const res = await api.get('/api/admin/attendance', {
-                headers: { Authorization: `Bearer ${token}` },
                 params: { moduleId: attendanceFilter.moduleId, date: attendanceFilter.date }
             });
             setAttendanceData(res.data);
@@ -816,12 +769,11 @@ export default function AdminDashboard() {
             return;
         }
         try {
-            const headers = { Authorization: `Bearer ${token}` };
             if (attendanceEditModal.id) {
                 await api.put(`/api/admin/attendance/${attendanceEditModal.id}`, {
                     status: attendanceEditForm.status,
                     justification: attendanceEditForm.justification
-                }, { headers });
+                });
             } else {
                 await api.post('/api/admin/attendance', {
                     userId: attendanceEditModal.userId,
@@ -829,7 +781,7 @@ export default function AdminDashboard() {
                     date: attendanceEditModal.date,
                     status: attendanceEditForm.status,
                     justification: attendanceEditForm.justification
-                }, { headers });
+                });
             }
             setAttendanceEditModal(null);
             setAttendanceEditForm({ status: '', justification: '' });
@@ -843,9 +795,7 @@ export default function AdminDashboard() {
 
     const handleSaveAttendanceConfig = async () => {
         try {
-            await api.put('/api/admin/config', attendanceConfig, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.put('/api/admin/config', attendanceConfig);
             alert('Configurações de presença salvas!');
         } catch { alert('Erro ao salvar configurações de presença.'); }
     };
@@ -886,11 +836,10 @@ export default function AdminDashboard() {
 
         setUserSecurityLoading(true);
         try {
-            const headers = { Authorization: `Bearer ${token}` };
             if (userSecurityAction.mode === 'password') {
                 const response = await api.post(`/api/admin/users/${userSecurityAction.user.id}/reset-password`, {
                     password: userSecurityForm.password
-                }, { headers });
+                });
                 const delivery = response.data.emailDelivery;
                 alert(delivery?.sent
                     ? 'Senha redefinida e nova credencial enviada por e-mail.'
@@ -901,7 +850,7 @@ export default function AdminDashboard() {
                 await api.patch(`/api/admin/users/${userSecurityAction.user.id}/access`, {
                     blocked: true,
                     reason: userSecurityForm.reason.trim()
-                }, { headers });
+                });
             }
             setUserSecurityAction(null);
             setUserSecurityForm({ password: '', confirmPassword: '', reason: '' });
@@ -917,9 +866,7 @@ export default function AdminDashboard() {
 
     const handleUnblockUser = async (targetUser: UserData) => {
         try {
-            await api.patch(`/api/admin/users/${targetUser.id}/access`, { blocked: false }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.patch(`/api/admin/users/${targetUser.id}/access`, { blocked: false });
             await fetchData();
         } catch (error: unknown) {
             alert(axios.isAxiosError<{ message?: string }>(error) ? error.response?.data?.message || 'Erro ao liberar acesso.' : 'Erro ao liberar acesso.');
@@ -928,9 +875,7 @@ export default function AdminDashboard() {
 
     const handleRevokeUserSessions = async (targetUser: UserData) => {
         try {
-            await api.post(`/api/admin/users/${targetUser.id}/revoke-sessions`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.post(`/api/admin/users/${targetUser.id}/revoke-sessions`, {});
             alert(`Sessões de ${targetUser.name} revogadas com sucesso.`);
         } catch (error: unknown) {
             alert(axios.isAxiosError<{ message?: string }>(error) ? error.response?.data?.message || 'Erro ao revogar sessões.' : 'Erro ao revogar sessões.');
@@ -1107,12 +1052,12 @@ export default function AdminDashboard() {
                             page={flaggedPage}
                             totalPages={flaggedTotalPages}
                             onApprove={async id => {
-                                await api.put(`/api/admin/comments/${id}/approve`, {}, { headers: { Authorization: `Bearer ${token}` } });
+                                await api.put(`/api/admin/comments/${id}/approve`, {});
                                 await fetchData();
                             }}
                             onPageChange={setFlaggedPage}
                             onRemove={async id => {
-                                await api.delete(`/api/admin/comments/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+                                await api.delete(`/api/admin/comments/${id}`);
                                 await fetchData();
                             }}
                         />
@@ -1130,22 +1075,22 @@ export default function AdminDashboard() {
                             violations={violations}
                             onAppealFilterChange={setAppealFilter}
                             onApplyBan={async () => {
-                                await api.post('/api/admin/bans', manualBanForm, { headers: { Authorization: `Bearer ${token}` } });
+                                await api.post('/api/admin/bans', manualBanForm);
                                 setManualBanForm({ userId: '', reason: '', banType: 'TEMP_1D' });
                                 await fetchData();
                             }}
                             onLiftBan={async id => {
-                                await api.put(`/api/admin/bans/${id}/lift`, {}, { headers: { Authorization: `Bearer ${token}` } });
+                                await api.put(`/api/admin/bans/${id}/lift`, {});
                                 await fetchData();
                             }}
                             onManualBanChange={setManualBanForm}
                             onRefresh={() => void fetchData()}
                             onReviewAppeal={async (id, status) => {
-                                await api.put(`/api/admin/appeals/${id}`, { status, adminNote: status === 'APPROVED' ? 'Recurso aceito' : 'Recurso negado' }, { headers: { Authorization: `Bearer ${token}` } });
+                                await api.put(`/api/admin/appeals/${id}`, { status, adminNote: status === 'APPROVED' ? 'Recurso aceito' : 'Recurso negado' });
                                 await fetchData();
                             }}
                             onToggle={async () => {
-                                const response = await api.put('/api/admin/punishment-toggle', {}, { headers: { Authorization: `Bearer ${token}` } });
+                                const response = await api.put('/api/admin/punishment-toggle', {});
                                 setPunishmentEnabled(response.data.forumPunishmentEnabled);
                             }}
                         />
@@ -1154,13 +1099,13 @@ export default function AdminDashboard() {
 
                     {activeTab === 'broadcast' && user?.role === 'ADMIN' && (
                         <div className="admin-fade-in">
-                            <BroadcastAdminPanel token={token || ''} />
+                            <BroadcastAdminPanel />
                         </div>
                     )}
 
                     {activeTab === 'privaterooms' && (
                         <div className="admin-fade-in">
-                            <PrivateRoomAdminPanel token={token || ''} />
+                            <PrivateRoomAdminPanel />
                         </div>
                     )}
 
@@ -1459,7 +1404,6 @@ export default function AdminDashboard() {
                 blocks={editBlocks}
                 form={editVideoData}
                 mode={editorModalMode}
-                token={token || ''}
                 onBlocksChange={setEditBlocks}
                 onClose={() => {
                     setEditingVideoId(null);

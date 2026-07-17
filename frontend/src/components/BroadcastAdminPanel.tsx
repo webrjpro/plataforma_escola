@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
 import {
     CalendarClock, Edit3, ExternalLink, Handshake, Loader2, Megaphone,
@@ -12,10 +12,6 @@ import type {
     BroadcastTickerItem,
 } from '../lib/broadcast';
 import './BroadcastAdminPanel.css';
-
-interface BroadcastAdminPanelProps {
-    token: string;
-}
 
 type ResourceTab = 'programs' | 'ticker' | 'partners';
 type JsonRecord = Record<string, unknown>;
@@ -136,8 +132,7 @@ function apiErrorMessage(error: unknown, fallback: string): string {
     return stringValue(payload.message, stringValue(record(payload.error).message, fallback));
 }
 
-export default function BroadcastAdminPanel({ token }: BroadcastAdminPanelProps) {
-    const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+export default function BroadcastAdminPanel() {
     const [settings, setSettings] = useState<BroadcastSettings>(EMPTY_SETTINGS);
     const [programs, setPrograms] = useState<BroadcastProgram[]>([]);
     const [tickers, setTickers] = useState<BroadcastTickerItem[]>([]);
@@ -156,7 +151,7 @@ export default function BroadcastAdminPanel({ token }: BroadcastAdminPanelProps)
         setLoading(true);
         setError('');
         try {
-            const response = await api.get('/api/admin/broadcast', { headers });
+            const response = await api.get('/api/admin/broadcast');
             const payload = record(response.data);
             setSettings(normalizeSettings(payload.settings));
             setPrograms(normalizePrograms(payload.programs));
@@ -171,9 +166,7 @@ export default function BroadcastAdminPanel({ token }: BroadcastAdminPanelProps)
 
     useEffect(() => {
         void load();
-        // `headers` only changes when the authenticated token changes.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [headers]);
+    }, []);
 
     const notifySuccess = (message: string) => {
         setSuccess(message);
@@ -185,7 +178,7 @@ export default function BroadcastAdminPanel({ token }: BroadcastAdminPanelProps)
         setSaving(true);
         setError('');
         try {
-            const response = await api.put('/api/admin/broadcast', settings, { headers });
+            const response = await api.put('/api/admin/broadcast', settings);
             const payload = record(response.data);
             setSettings(normalizeSettings(payload.settings ?? response.data));
             notifySuccess('Configurações do Campus publicadas.');
@@ -214,8 +207,8 @@ export default function BroadcastAdminPanel({ token }: BroadcastAdminPanelProps)
         };
         try {
             const response = editingId
-                ? await api.put(`/api/admin/broadcast/programs/${editingId}`, payload, { headers })
-                : await api.post('/api/admin/broadcast/programs', payload, { headers });
+                ? await api.put(`/api/admin/broadcast/programs/${editingId}`, payload)
+                : await api.post('/api/admin/broadcast/programs', payload);
             const saved = normalizePrograms([record(response.data).program ?? response.data])[0];
             setPrograms((current) => editingId
                 ? current.map((item) => item.id === editingId ? saved : item)
@@ -235,8 +228,8 @@ export default function BroadcastAdminPanel({ token }: BroadcastAdminPanelProps)
         setError('');
         try {
             const response = editingId
-                ? await api.put(`/api/admin/broadcast/ticker/${editingId}`, tickerForm, { headers })
-                : await api.post('/api/admin/broadcast/ticker', tickerForm, { headers });
+                ? await api.put(`/api/admin/broadcast/ticker/${editingId}`, tickerForm)
+                : await api.post('/api/admin/broadcast/ticker', tickerForm);
             const saved = normalizeTickers([record(response.data).ticker ?? response.data])[0];
             setTickers((current) => editingId ? current.map((item) => item.id === editingId ? saved : item) : [...current, saved]);
             resetEditor();
@@ -254,8 +247,8 @@ export default function BroadcastAdminPanel({ token }: BroadcastAdminPanelProps)
         setError('');
         try {
             const response = editingId
-                ? await api.put(`/api/admin/broadcast/partners/${editingId}`, partnerForm, { headers })
-                : await api.post('/api/admin/broadcast/partners', partnerForm, { headers });
+                ? await api.put(`/api/admin/broadcast/partners/${editingId}`, partnerForm)
+                : await api.post('/api/admin/broadcast/partners', partnerForm);
             const saved = normalizePartners([record(response.data).partner ?? response.data])[0];
             setPartners((current) => editingId ? current.map((item) => item.id === editingId ? saved : item) : [...current, saved]);
             resetEditor();
@@ -271,7 +264,7 @@ export default function BroadcastAdminPanel({ token }: BroadcastAdminPanelProps)
         if (!window.confirm(`Remover “${label}”?`)) return;
         setError('');
         try {
-            await api.delete(`/api/admin/broadcast/${type}/${id}`, { headers });
+            await api.delete(`/api/admin/broadcast/${type}/${id}`);
             if (type === 'programs') setPrograms((current) => current.filter((item) => item.id !== id));
             if (type === 'ticker') setTickers((current) => current.filter((item) => item.id !== id));
             if (type === 'partners') setPartners((current) => current.filter((item) => item.id !== id));
@@ -372,9 +365,7 @@ export default function BroadcastAdminPanel({ token }: BroadcastAdminPanelProps)
                                                     setSaving(true);
                                                     const formData = new FormData();
                                                     formData.append('video', file);
-                                                    const res = await api.post('/api/broadcast/upload-video', formData, {
-                                                        headers: { Authorization: `Bearer ${token}` }
-                                                    });
+                                                    const res = await api.post('/api/broadcast/upload-video', formData);
                                                     setProgramForm(current => ({ ...current, sourceUrl: res.data.url }));
                                                 } catch {
                                                     alert('Erro no upload do vídeo');

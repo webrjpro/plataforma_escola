@@ -45,7 +45,7 @@ export default function VideoPlayer({ videoId, hlsUrl, moduleId }: VideoPlayerPr
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const playerRef = useRef<Player | null>(null);
     const watermarkRef = useRef<HTMLDivElement | null>(null);
-    const { user, token } = useAuth();
+    const { user } = useAuth();
     const { config } = useConfig();
 
     useEffect(() => {
@@ -103,7 +103,6 @@ export default function VideoPlayer({ videoId, hlsUrl, moduleId }: VideoPlayerPr
             let initialTime = 0;
             try {
                 const res = await api.get(`/api/student/progress/${videoId}`, {
-                    headers: { Authorization: `Bearer ${token}` },
                     signal: abortController.signal
                 });
                 if (res.data && res.data.progress) {
@@ -214,7 +213,7 @@ export default function VideoPlayer({ videoId, hlsUrl, moduleId }: VideoPlayerPr
             clearInterval(tokenRefreshInterval);
             if (flushOnPageHide) window.removeEventListener('pagehide', flushOnPageHide);
         };
-    }, [config.attendanceEnabled, hlsUrl, moduleId, token, videoId]);
+    }, [config.attendanceEnabled, hlsUrl, moduleId, videoId]);
 
     return (
         <div style={{ position: 'relative', width: '100%', borderRadius: '0', overflow: 'hidden' }}>

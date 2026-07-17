@@ -30,7 +30,7 @@ export default function PasswordSetupPage() {
         setLoading(true);
         try {
             const response = await api.put('/api/auth/profile', { currentPassword: form.currentPassword, newPassword: form.newPassword });
-            login(response.data.token, response.data.user);
+            login(response.data.user);
             navigate(homeFor(response.data.user.role), { replace: true });
         } catch (requestError) {
             setError(axios.isAxiosError(requestError) ? requestError.response?.data?.message || 'Não foi possível atualizar a senha.' : 'Ocorreu um erro inesperado.');

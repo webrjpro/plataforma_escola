@@ -40,7 +40,9 @@ mkdir -p \
   /var/lib/nginx/tmp/body \
   /var/lib/nginx/tmp/proxy
 
-chown -R eduvault:eduvault /data /app
+# Application files are already copied with the correct owner at build time.
+# Only the mounted data volume can arrive with host/Railway ownership.
+chown -R eduvault:eduvault /data
 chown -R nginx:nginx /run/nginx /var/cache/nginx /var/lib/nginx
 
 echo "[railway] aguardando PostgreSQL e aplicando migrações Prisma..."

@@ -93,7 +93,7 @@ interface StudentLiveClass {
 type StudentView = 'dashboard' | 'courses' | 'schedule' | 'activities' | 'progress' | 'track';
 
 export default function StudentDashboard() {
-    const { user, token, logout, login: doLogin } = useAuth();
+    const { user, logout, login: doLogin } = useAuth();
     const { config } = useConfig();
     const [courses, setCourses] = useState<CourseWithProgress[]>([]);
     const [loading, setLoading] = useState(true);
@@ -126,12 +126,11 @@ export default function StudentDashboard() {
                     return;
                 }
 
-                const headers = { Authorization: `Bearer ${token}` };
                 const [myRes, notifRes, liveRes, recRes] = await Promise.all([
-                    api.get('/api/student/my-courses', { headers }),
-                    api.get('/api/student/notifications', { headers }),
-                    api.get('/api/student/my-live-classes', { headers }),
-                    api.get('/api/student/recommendations', { headers })
+                    api.get('/api/student/my-courses'),
+                    api.get('/api/student/notifications'),
+                    api.get('/api/student/my-live-classes'),
+                    api.get('/api/student/recommendations')
                 ]);
                 setCourses(myRes.data);
                 setNotifications(notifRes.data);
@@ -143,8 +142,8 @@ export default function StudentDashboard() {
                 setLoading(false);
             }
         };
-        if (token) fetchData();
-    }, [token, user?.mustChangePassword]);
+        if (user) fetchData();
+    }, [user]);
 
     const handleForcePasswordChange = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -160,11 +159,9 @@ export default function StudentDashboard() {
             const res = await api.put('/api/auth/profile', {
                 currentPassword: forcePasswordForm.currentPassword,
                 newPassword: forcePasswordForm.newPassword
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
             });
 
-            doLogin(res.data.token, res.data.user);
+            doLogin(res.data.user);
             setForcePasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
             window.location.reload();
         } catch (err: unknown) {
@@ -188,9 +185,7 @@ export default function StudentDashboard() {
 
     const handleMarkAllRead = async () => {
         try {
-            await api.put('/api/student/notifications/read-all', {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.put('/api/student/notifications/read-all', {});
             setNotifications(prev => prev.map(n => ({ ...n, read: true })));
         } catch { /* ignore */ }
     };
@@ -214,12 +209,10 @@ export default function StudentDashboard() {
             import('../components/VideoPlayer');
         }
 
-        if (!videoId || !token || prefetchedLessonsRef.current.has(videoId)) return;
+        if (!videoId || prefetchedLessonsRef.current.has(videoId)) return;
         prefetchedLessonsRef.current.add(videoId);
 
-        api.get(`/api/student/lesson/${videoId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-        }).catch(() => {
+        api.get(`/api/student/lesson/${videoId}`).catch(() => {
             prefetchedLessonsRef.current.delete(videoId);
         });
     };

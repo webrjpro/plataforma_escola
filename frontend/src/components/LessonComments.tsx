@@ -63,7 +63,7 @@ function latestCommentTimestamp(comments: CommentData[], fallback: string): stri
 }
 
 export default function LessonComments({ videoId }: Props) {
-    const { token, user } = useAuth();
+    const { user } = useAuth();
     const [comments, setComments] = useState<CommentData[]>([]);
     const [commentsEnabled, setCommentsEnabled] = useState(true);
     const [newComment, setNewComment] = useState('');
@@ -93,7 +93,6 @@ export default function LessonComments({ videoId }: Props) {
             const incremental = mode === 'incremental' && Boolean(lastSyncRef.current);
             const cursorFallback = new Date(Date.now() - 30_000).toISOString();
             const res = await api.get(url, {
-                headers: { Authorization: `Bearer ${token}` },
                 params: incremental ? { after: lastSyncRef.current } : undefined
             });
             const received = Array.isArray(res.data.comments) ? res.data.comments as CommentData[] : [];
@@ -110,7 +109,7 @@ export default function LessonComments({ videoId }: Props) {
         } catch {
             // silencioso no polling
         }
-    }, [videoId, token]);
+    }, [videoId]);
 
     // Fetch inicial
     useEffect(() => {
@@ -163,8 +162,6 @@ export default function LessonComments({ videoId }: Props) {
                 videoId,
                 text: text.trim(),
                 parentId: parentId || undefined
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
             });
 
             if (parentId) {
@@ -208,9 +205,7 @@ export default function LessonComments({ videoId }: Props) {
 
     const handleDelete = async (commentId: string) => {
         try {
-            await api.delete(`/api/student/comments/${commentId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.delete(`/api/student/comments/${commentId}`);
             await fetchComments();
         } catch {
             setError('Erro ao deletar comentário.');
@@ -223,8 +218,6 @@ export default function LessonComments({ videoId }: Props) {
         try {
             await api.post(`/api/student/comments/${commentId}/report`, {
                 reason: reportReason.trim()
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
             });
             setReportingId(null);
             setReportReason('');
@@ -266,9 +259,7 @@ export default function LessonComments({ videoId }: Props) {
         if (!appealText.trim() || appealText.trim().length < 10 || appealSubmitting) return;
         setAppealSubmitting(true);
         try {
-            await api.post('/api/student/forum/appeal', { reason: appealText.trim() }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.post('/api/student/forum/appeal', { reason: appealText.trim() });
             setAppealSuccess(true);
             setShowAppealForm(false);
             setAppealText('');

@@ -1,4 +1,4 @@
-name: Production Operational Gates
+name: Staging Gates
 
 on:
   workflow_dispatch:
@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: production-operational-gates
+  group: staging-gates
   cancel-in-progress: false
 
 jobs:
@@ -40,9 +40,9 @@ jobs:
       - name: Run isolated backup and restore drill
         run: bash scripts/backup-restore-drill.sh
 
-  staging-smoke:
+  http-gates:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     environment: staging
     env:
       STAGING_BASE_URL: ${{ inputs.staging_base_url || secrets.STAGING_BASE_URL }}
@@ -75,3 +75,45 @@ jobs:
           LOAD_REQUESTS: 1000
           LOAD_CONCURRENCY: 20
           LOAD_MAX_P95_MS: 350
+
+  critical-journeys:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+    env:
+      CI: true
+      E2E_BASE_URL: ${{ inputs.staging_base_url || secrets.STAGING_BASE_URL }}
+      E2E_API_URL: ${{ inputs.staging_api_url || secrets.STAGING_API_URL }}
+      E2E_REQUIRE_ADMIN: true
+      E2E_ADMIN_LOGIN: ${{ secrets.E2E_ADMIN_LOGIN }}
+      E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+      E2E_STUDENT_LOGIN: ${{ secrets.E2E_STUDENT_LOGIN }}
+      E2E_STUDENT_PASSWORD: ${{ secrets.E2E_STUDENT_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Require staging URLs
+        shell: bash
+        run: |
+          if [[ -z "$E2E_BASE_URL" || -z "$E2E_API_URL" ]]; then
+            echo "E2E_BASE_URL and E2E_API_URL must be configured as inputs or staging secrets." >&2
+            exit 2
+          fi
+      - name: Install Chromium
+        run: npm run test:e2e:install
+      - name: Run critical journeys
+        run: npm run test:e2e
+        env:
+          E2E_ARTIFACTS_DIR: ${{ runner.temp }}/playwright-artifacts
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-${{ github.run_id }}
+          path: ${{ runner.temp }}/playwright-artifacts
+          if-no-files-found: ignore
+          retention-days: 7

@@ -19,13 +19,19 @@ import fs from 'fs';
 import fsp from 'fs/promises';
 import path from 'path';
 import multer from 'multer';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { authenticateToken, requireRole } from '../middleware/authMiddleware';
 import { enqueueVideoProcessing } from '../config/pgBoss';
 import prisma from '../lib/prisma';
 import { invalidateConfigCache } from './config';
 import logger from '../lib/logger';
 import { uploadFileToStorage } from '../lib/storage';
+import {
+    isPdfFile,
+    isSafeWebImage,
+    isSpreadsheetFile,
+    removeFileQuietly,
+} from '../lib/fileValidation';
 import {
     getEmailConfigurationStatus,
     isEmailConfigured,
@@ -94,7 +100,7 @@ function createUploadStorage(resolveDirectory: () => string): multer.StorageEngi
             cb(null, directory);
         },
         filename: (_req, file, cb) => {
-            cb(null, uuidv4() + path.extname(file.originalname));
+            cb(null, randomUUID() + path.extname(file.originalname));
         },
     });
 }
@@ -662,9 +668,15 @@ router.post('/upload-image', authenticateToken, requireRole(['ADMIN', 'TEACHER']
             res.status(400).json({ message: 'Nenhuma imagem enviada.' });
             return;
         }
+        if (!await isSafeWebImage(file.path)) {
+            await removeFileQuietly(file.path);
+            res.status(400).json({ message: 'O arquivo enviado não é uma imagem válida.' });
+            return;
+        }
         const imageUrl = await uploadFileToStorage(file.path, 'images', file.filename, file.mimetype);
         res.json({ url: imageUrl, filename: file.filename });
     } catch (error) {
+        await removeFileQuietly(req.file?.path);
         console.error(error);
         res.status(500).json({ message: 'Erro ao realizar upload de imagem.' });
     }
@@ -681,9 +693,15 @@ router.post('/upload-pdf', authenticateToken, requireRole(['ADMIN', 'TEACHER']),
             res.status(400).json({ message: 'Nenhum PDF enviado.' });
             return;
         }
+        if (!await isPdfFile(file.path)) {
+            await removeFileQuietly(file.path);
+            res.status(400).json({ message: 'O arquivo enviado não é um PDF válido.' });
+            return;
+        }
         const pdfUrl = await uploadFileToStorage(file.path, 'pdfs', file.filename, file.mimetype);
         res.json({ url: pdfUrl, filename: file.filename });
     } catch (error) {
+        await removeFileQuietly(req.file?.path);
         console.error(error);
         res.status(500).json({ message: 'Erro ao realizar upload de PDF.' });
     }
@@ -995,6 +1013,10 @@ router.post('/upload-students-excel', authenticateToken, requireRole(['ADMIN']),
             res.status(400).json({ message: 'Nenhum arquivo enviado.' });
             return;
         }
+        if (!await isSpreadsheetFile(filePath)) {
+            res.status(400).json({ message: 'O arquivo enviado não é uma planilha XLSX válida.' });
+            return;
+        }
         const result = await importStudentsFromWorkbook(filePath);
         const successful = result.results.filter((row) => !row.error).length;
         await auditLog(req.user!.id, 'EXCEL_IMPORT', `${result.results.length} linhas`, `Importou planilha: ${successful} OK, ${result.results.length - successful} erros`);
@@ -1010,7 +1032,7 @@ router.post('/upload-students-excel', authenticateToken, requireRole(['ADMIN']),
         logger.error({ error, userId: req.user?.id }, 'Erro ao processar planilha de alunos');
         res.status(500).json({ message: 'Erro ao processar planilha.' });
     } finally {
-        if (filePath) void fsp.unlink(filePath).catch(() => {});
+        await removeFileQuietly(filePath);
     }
 });
 

@@ -2,11 +2,11 @@
  * ProtectedRoute.tsx — Guard de Rotas por Autenticação e Role
  *
  * Comportamento:
- * - Sem token: redireciona para /login
- * - Com token mas role não autorizada: redireciona para o dashboard correto
+ * - Sem sessão autenticada: redireciona para /login
+ * - Com sessão mas role não autorizada: redireciona para o dashboard correto
  *   (STUDENT → /student/dashboard, ADMIN → /admin)
- * - Com token e role autorizada: renderiza o Outlet (rota filha)
- * - Exibe spinner durante validação do token (isLoading)
+ * - Com sessão e role autorizada: renderiza o Outlet (rota filha)
+ * - Exibe spinner durante validação da sessão (isLoading)
  */
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -14,7 +14,7 @@ import { Loader2 } from 'lucide-react';
 
 // ISSUE-13: Redireciona para dashboard adequado ao invés de login quando role não autorizada
 export const ProtectedRoute = ({ allowedRoles }: { allowedRoles?: string[] }) => {
-    const { user, token, isLoading } = useAuth();
+    const { user, isLoading } = useAuth();
     const location = useLocation();
 
     if (isLoading) {
@@ -25,7 +25,7 @@ export const ProtectedRoute = ({ allowedRoles }: { allowedRoles?: string[] }) =>
         );
     }
 
-    if (!token || !user) {
+    if (!user) {
         return <Navigate to="/login" replace />;
     }
 

@@ -196,7 +196,7 @@ function conversationDate(value: string): string {
 }
 
 export default function TutorPage() {
-    const { token, user } = useAuth();
+    const { user } = useAuth();
     const { config } = useConfig();
     const [searchParams] = useSearchParams();
     const [conversations, setConversations] = useState<TutorConversation[]>([]);
@@ -219,7 +219,6 @@ export default function TutorPage() {
     const requestRef = useRef<AbortController | null>(null);
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-    const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
     const selectedCourse = useMemo(() => courses.find((course) => course.id === courseId) || null, [courseId, courses]);
     const videos = useMemo(() => selectedCourse?.modules.flatMap((module) => module.videos.map((video) => ({ ...video, moduleName: module.name }))) || [], [selectedCourse]);
     const selectedVideo = videos.find((video) => video.id === videoId) || null;
@@ -230,8 +229,8 @@ export default function TutorPage() {
             setLoading(true);
             setError('');
             const [bootstrapResult, coursesResult] = await Promise.allSettled([
-                api.get('/api/ai/bootstrap', { headers, signal: controller.signal }),
-                api.get('/api/student/my-courses', { headers, signal: controller.signal }),
+                api.get('/api/ai/bootstrap', { signal: controller.signal }),
+                api.get('/api/student/my-courses', { signal: controller.signal }),
             ]);
             if (controller.signal.aborted) return;
             if (bootstrapResult.status === 'rejected') {
@@ -255,7 +254,7 @@ export default function TutorPage() {
         };
         void load();
         return () => controller.abort();
-    }, [headers, searchParams]);
+    }, [searchParams]);
 
     useEffect(() => {
         if (!activeConversationId) {
@@ -266,7 +265,7 @@ export default function TutorPage() {
         const loadConversation = async () => {
             setConversationLoading(true);
             try {
-                const response = await api.get(`/api/ai/conversations/${activeConversationId}/history`, { headers, signal: controller.signal });
+                const response = await api.get(`/api/ai/conversations/${activeConversationId}/history`, { signal: controller.signal });
                 const payload = record(response.data);
                 const conversation = normalizeConversation(payload.conversation ?? response.data);
                 if (!controller.signal.aborted) {
@@ -287,7 +286,7 @@ export default function TutorPage() {
         };
         void loadConversation();
         return () => controller.abort();
-    }, [activeConversationId, headers]);
+    }, [activeConversationId]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -315,7 +314,7 @@ export default function TutorPage() {
             title: firstMessage.slice(0, 72),
             courseId: courseId || null,
             lessonId: videoId || null,
-        }, { headers });
+        });
         const payload = record(response.data);
         const conversation = normalizeConversation(payload.conversation ?? response.data);
         setConversations((current) => [conversation, ...current.filter((item) => item.id !== conversation.id)]);
@@ -343,7 +342,7 @@ export default function TutorPage() {
                 message: content,
                 courseId: courseId || null,
                 lessonId: videoId || null,
-            }, { headers, signal: controller.signal });
+            }, { signal: controller.signal });
             const result = record(response.data);
             const assistantRaw = result.assistantMessage ?? result.message ?? result.content;
             const assistant = typeof assistantRaw === 'string'
@@ -376,7 +375,7 @@ export default function TutorPage() {
     const deleteConversation = async (conversation: TutorConversation) => {
         if (!window.confirm(`Excluir a conversa “${conversation.title}”?`)) return;
         try {
-            await api.delete(`/api/ai/conversations/${conversation.id}`, { headers });
+            await api.delete(`/api/ai/conversations/${conversation.id}`);
             setConversations((current) => current.filter((item) => item.id !== conversation.id));
             if (activeConversationId === conversation.id) startConversation();
         } catch {
@@ -394,7 +393,7 @@ export default function TutorPage() {
                 explanationDepth: profile.explanationDepth,
                 tone: profile.tone,
                 learningGoals: profile.learningGoals || null,
-            }, { headers });
+            });
             setProfile(normalizeProfile(record(response.data).profile ?? response.data));
             setProfileSaved(true);
             window.setTimeout(() => setProfileSaved(false), 2500);

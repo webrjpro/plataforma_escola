@@ -3,10 +3,9 @@
  *
  * Provê para toda a aplicação:
  * - user: dados do usuario logado (id, name, email, role)
- * - token: marcador de sessão; o JWT real permanece em cookie HttpOnly
  * - login(): atualiza o usuário autenticado em memória
  * - logout(): limpa o estado e encerra a sessão no servidor
- * - isLoading: true enquanto valida o token armazenado via GET /api/auth/me
+ * - isLoading: true enquanto valida a sessão HttpOnly via GET /api/auth/me
  *
  * Persistência: cookie HttpOnly/SameSite validado em GET /api/auth/me
  */
@@ -27,15 +26,13 @@ export interface User {
 
 interface AuthContextType {
     user: User | null;
-    token: string | null;
-    login: (token: string, user: User) => void;
+    login: (user: User) => void;
     logout: () => void;
     isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
     user: null,
-    token: null,
     login: () => { },
     logout: () => { },
     isLoading: true
@@ -43,7 +40,6 @@ const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
-    const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const hasCheckedRef = useRef(false);
 
@@ -55,11 +51,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         api.get('/api/auth/me')
             .then(response => {
                 setUser(response.data);
-                setToken('cookie-session');
             })
             .catch(() => {
                 setUser(null);
-                setToken(null);
             })
             .finally(() => {
                 setIsLoading(false);
@@ -68,26 +62,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     useEffect(() => {
         const expire = () => {
-            setToken(null);
             setUser(null);
         };
         window.addEventListener('eduvault:session-expired', expire);
         return () => window.removeEventListener('eduvault:session-expired', expire);
     }, []);
 
-    const login = (_newToken: string, newUser: User) => {
-        setToken('cookie-session');
+    const login = (newUser: User) => {
         setUser(newUser);
     };
 
     const logout = () => {
         void api.post('/api/auth/logout').catch(() => undefined);
-        setToken(null);
         setUser(null);
     };
 
     return (
-        <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>
+        <AuthContext.Provider value={{ user, login, logout, isLoading }}>
             {children}
         </AuthContext.Provider>
     );

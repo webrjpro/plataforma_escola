@@ -1,8 +1,7 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { createReadStream } from 'node:fs';
-import { stat, readdir, unlink, rm } from 'node:fs/promises';
-import path from 'node:path';
+import { stat, unlink } from 'node:fs/promises';
 import logger from './logger';
 
 export const isR2Configured = () => {
@@ -91,53 +90,3 @@ export const uploadFileToStorage = async (
 export function canUsePublicObjectStorage(folder: string): boolean {
     return folder !== 'pdfs';
 }
-
-/**
- * Uploads an entire folder (e.g., HLS directory) to R2 and deletes the local folder.
- */
-export const uploadFolderToStorage = async (
-    localDirPath: string,
-    baseFolder: string // e.g. 'uploads/hls/video_id'
-): Promise<void> => {
-    if (!isR2Configured() || !s3Client) return;
-
-    try {
-        const files = await readdir(localDirPath, { recursive: true });
-
-        for (const file of files) {
-            const fullPath = path.join(localDirPath, file);
-            const fileInfo = await stat(fullPath);
-
-            if (fileInfo.isDirectory()) continue;
-
-            const key = `${baseFolder}/${file.replace(/\\/g, '/')}`;
-            const mimeType = file.endsWith('.m3u8')
-                ? 'application/vnd.apple.mpegurl'
-                : file.endsWith('.ts')
-                    ? 'video/mp2t'
-                    : 'application/octet-stream';
-
-            const command = new PutObjectCommand({
-                Bucket: process.env.R2_BUCKET!,
-                Key: key,
-                Body: createReadStream(fullPath),
-                ContentType: mimeType,
-            });
-
-            await s3Client.send(command);
-        }
-
-        // Delete local folder after upload
-        await rm(localDirPath, { recursive: true, force: true }).catch(() => {});
-    } catch (error) {
-        logger.error({ error, baseFolder }, 'Falha no upload da pasta HLS para R2');
-    }
-};
-
-export const getHlsBaseUrl = (videoId: string): string => {
-    if (isR2Configured()) {
-        const baseUrl = process.env.R2_PUBLIC_URL!.replace(/\/$/, '');
-        return `${baseUrl}/uploads/hls/${videoId}`;
-    }
-    return `/hls/${videoId}`;
-};

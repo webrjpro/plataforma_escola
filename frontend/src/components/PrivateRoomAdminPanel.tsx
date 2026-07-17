@@ -15,7 +15,7 @@ interface PrivateRoom {
     createdAt: string;
 }
 
-export default function PrivateRoomAdminPanel({ token }: { token: string }) {
+export default function PrivateRoomAdminPanel() {
     const [rooms, setRooms] = useState<PrivateRoom[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -27,9 +27,7 @@ export default function PrivateRoomAdminPanel({ token }: { token: string }) {
     const loadRooms = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await api.get('/api/admin/private-rooms', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.get('/api/admin/private-rooms');
             setRooms(res.data);
         } catch (err) {
             console.error(err);
@@ -37,7 +35,7 @@ export default function PrivateRoomAdminPanel({ token }: { token: string }) {
         } finally {
             setLoading(false);
         }
-    }, [token]);
+    }, []);
 
     useEffect(() => {
         void loadRooms();
@@ -52,9 +50,7 @@ export default function PrivateRoomAdminPanel({ token }: { token: string }) {
     const handleDelete = async (id: string) => {
         if (!window.confirm('Tem certeza que deseja remover esta sala?')) return;
         try {
-            await api.delete(`/api/admin/private-rooms/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.delete(`/api/admin/private-rooms/${id}`);
             setRooms(r => r.filter(x => x.id !== id));
         } catch {
             alert('Erro ao excluir');
@@ -65,13 +61,11 @@ export default function PrivateRoomAdminPanel({ token }: { token: string }) {
         e.preventDefault();
         try {
             setSaving(true);
-            const config = { headers: { Authorization: `Bearer ${token}` } };
-
             if (editingId) {
-                const res = await api.put(`/api/admin/private-rooms/${editingId}`, form, config);
+                const res = await api.put(`/api/admin/private-rooms/${editingId}`, form);
                 setRooms(r => r.map(x => x.id === editingId ? res.data : x));
             } else {
-                const res = await api.post('/api/admin/private-rooms', form, config);
+                const res = await api.post('/api/admin/private-rooms', form);
                 setRooms([res.data, ...rooms]);
             }
 

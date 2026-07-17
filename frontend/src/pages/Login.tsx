@@ -35,7 +35,7 @@ export default function Login() {
 
         try {
             const response = await api.post('/api/auth/login', { login, password });
-            doLogin(response.data.token, response.data.user);
+            doLogin(response.data.user);
 
             if (response.data.user.role === 'ADMIN' || response.data.user.role === 'TEACHER') {
                 navigate('/admin');

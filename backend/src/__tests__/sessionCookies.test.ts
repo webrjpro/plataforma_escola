@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NextFunction, Request, Response } from 'express';
 import {
-    COOKIE_SESSION_MARKER,
     CSRF_COOKIE,
     SESSION_COOKIE,
     authTtlHours,
@@ -55,11 +54,8 @@ describe('session cookie transport', () => {
         expect(sessionTokenFromRequest(req)).toBe('integration-jwt');
     });
 
-    it('uses the HttpOnly cookie when the SPA sends only its session marker', () => {
-        const req = request({
-            cookie: `${SESSION_COOKIE}=real-cookie-jwt`,
-            authorization: `Bearer ${COOKIE_SESSION_MARKER}`,
-        });
+    it('uses the HttpOnly cookie when the SPA sends no Authorization header', () => {
+        const req = request({ cookie: `${SESSION_COOKIE}=real-cookie-jwt` });
         expect(sessionTokenFromRequest(req)).toBe('real-cookie-jwt');
     });
 

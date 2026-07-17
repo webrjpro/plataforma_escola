@@ -111,7 +111,7 @@ function findActiveLiveClasses(courseId: string | { in: string[] }, includeCours
 
 // This router owns student state (progress, attempts, attendance, comments and
 // certificates). Fixing the role at the boundary prevents a teacher account
-// from reusing an old enrollment to bypass TeacherCourseAssignment scope.
+// from reusing its course enrollment to enter student-only flows.
 router.use(authenticateToken, requireRole(['STUDENT']));
 
 // ============================================================

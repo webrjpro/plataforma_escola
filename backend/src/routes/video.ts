@@ -61,11 +61,11 @@ router.post('/upload',
                 return;
             }
             if (req.user!.role === 'TEACHER') {
-                const assignment = await prisma.teacherCourseAssignment.findUnique({
+                const assignment = await prisma.courseEnrollment.findUnique({
                     where: { userId_courseId: { userId: req.user!.id, courseId: targetModule.courseId } },
-                    select: { id: true }
+                    select: { id: true, enrollmentRole: true }
                 });
-                if (!assignment) {
+                if (assignment?.enrollmentRole !== 'TEACHER') {
                     await removeUploadedFile(file.path);
                     res.status(403).json({ message: 'Professor não está atribuído ao curso deste módulo.' });
                     return;
@@ -141,11 +141,11 @@ router.get('/module/:moduleId', authenticateToken, async (req: Request, res: Res
                 res.status(404).json({ message: 'Módulo não encontrado.' });
                 return;
             }
-            const assignment = await prisma.teacherCourseAssignment.findUnique({
+            const assignment = await prisma.courseEnrollment.findUnique({
                 where: { userId_courseId: { userId, courseId: moduleWithCourse.courseId } },
-                select: { id: true }
+                select: { id: true, enrollmentRole: true }
             });
-            if (!assignment) {
+            if (assignment?.enrollmentRole !== 'TEACHER') {
                 res.status(403).json({ message: 'Professor não está atribuído a este curso.' });
                 return;
             }

@@ -9,8 +9,8 @@
  */
 import multer from 'multer';
 import path from 'path';
+import { randomUUID } from 'crypto';
 import { Request } from 'express';
-import { v4 as uuidv4 } from 'uuid';
 import fsp from 'fs/promises';
 
 const ALLOWED_VIDEO_EXTENSIONS = new Set([
@@ -29,7 +29,7 @@ const storage = multer.diskStorage({
     filename: (_req, file, cb) => {
         // Generate unique filename to prevent overrides
         const extension = path.extname(file.originalname).toLowerCase();
-        const uniqueSuffix = uuidv4() + extension;
+        const uniqueSuffix = randomUUID() + extension;
         cb(null, file.fieldname + '-' + uniqueSuffix);
     }
 });
@@ -57,11 +57,12 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 
 const executeFile = promisify(execFile);
+const ffprobeBinary = process.env.FFPROBE_PATH?.trim() || 'ffprobe';
 
 export async function validateUploadedVideo(filePath: string): Promise<boolean> {
     try {
         const { stdout } = await executeFile(
-            'ffprobe',
+            ffprobeBinary,
             ['-v', 'error', '-show_entries', 'stream=codec_type', '-show_entries', 'format=duration', '-of', 'json', filePath],
             { timeout: 20000, maxBuffer: 1000000, windowsHide: true }
         );

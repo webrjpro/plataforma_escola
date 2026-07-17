@@ -83,7 +83,6 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
         issueSessionCookies(res, token);
 
         res.json({
-            token: 'cookie-session',
             user: {
                 id: user.id,
                 name: user.name,
@@ -227,7 +226,6 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response): P
 
         res.json({
             message: 'Credenciais atualizadas com sucesso!',
-            token: 'cookie-session',
             user: updatedUser
         });
     } catch (error) {
@@ -285,11 +283,11 @@ router.get('/stream-token', authenticateToken, async (req: Request, res: Respons
                 return;
             }
         } else if (req.user!.role === 'TEACHER') {
-            const assignment = await prisma.teacherCourseAssignment.findUnique({
+            const assignment = await prisma.courseEnrollment.findUnique({
                 where: { userId_courseId: { userId: req.user!.id, courseId: video.module.courseId } },
-                select: { id: true }
+                select: { id: true, enrollmentRole: true }
             });
-            if (!assignment) {
+            if (assignment?.enrollmentRole !== 'TEACHER') {
                 res.status(403).json({ message: 'Professor não está atribuído a este curso.' });
                 return;
             }

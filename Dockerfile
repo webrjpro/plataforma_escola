@@ -26,7 +26,8 @@ ENV NODE_ENV=production \
 
 WORKDIR /app
 
-RUN apk add --no-cache \
+RUN apk upgrade --no-cache \
+    && apk add --no-cache \
       ffmpeg \
       gettext-envsubst \
       nginx \
@@ -49,7 +50,9 @@ RUN apk add --no-cache \
       /var/lib/nginx/tmp/body \
       /var/lib/nginx/tmp/proxy \
     && chown -R eduvault:eduvault /app /data /var/www/eduvault \
-    && chown -R nginx:nginx /run/nginx /var/cache/nginx /var/lib/nginx
+    && chown -R nginx:nginx /run/nginx /var/cache/nginx /var/lib/nginx \
+    && rm -rf /usr/local/lib/node_modules/npm \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx
 
 COPY --from=backend-build --chown=eduvault:eduvault /app/backend/node_modules /app/api/node_modules
 COPY --from=backend-build --chown=eduvault:eduvault /app/backend/dist /app/api/dist

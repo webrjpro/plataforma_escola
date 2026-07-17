@@ -63,7 +63,6 @@ export interface ContentBlock {
 interface BlockEditorProps {
     blocks: ContentBlock[];
     onChange: (blocks: ContentBlock[]) => void;
-    token: string;
 }
 
 // ─── Helper: generate unique id ───
@@ -241,7 +240,7 @@ function TextEditor({ data, onChange }: { data: Record<string, string>; onChange
     );
 }
 
-function ImageEditor({ data, onChange, token }: { data: Record<string, string>; onChange: (d: Record<string, string>) => void; token: string }) {
+function ImageEditor({ data, onChange }: { data: Record<string, string>; onChange: (d: Record<string, string>) => void }) {
     const fileRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
 
@@ -250,9 +249,7 @@ function ImageEditor({ data, onChange, token }: { data: Record<string, string>; 
         formData.append('image', file);
         try {
             setUploading(true);
-            const res = await api.post('/api/admin/upload-image', formData, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.post('/api/admin/upload-image', formData);
             onChange({ ...data, url: res.data.url });
         } catch {
             alert('Erro ao enviar imagem');
@@ -384,7 +381,7 @@ function HtmlCssEditor({ data, onChange }: { data: Record<string, string>; onCha
 }
 
 // ─── Main BlockEditor Component ───
-export default function BlockEditor({ blocks, onChange, token }: BlockEditorProps) {
+export default function BlockEditor({ blocks, onChange }: BlockEditorProps) {
     const [showPalette, setShowPalette] = useState(false);
     const [previewMode, setPreviewMode] = useState(false);
 
@@ -423,7 +420,7 @@ export default function BlockEditor({ blocks, onChange, token }: BlockEditorProp
             case 'text':
                 return <TextEditor data={block.data} onChange={d => updateBlock(block.id, d)} />;
             case 'image':
-                return <ImageEditor data={block.data} onChange={d => updateBlock(block.id, d)} token={token} />;
+                return <ImageEditor data={block.data} onChange={d => updateBlock(block.id, d)} />;
             case 'two-columns':
                 return <TwoColumnsEditor data={block.data} onChange={d => updateBlock(block.id, d)} />;
             case 'highlight':

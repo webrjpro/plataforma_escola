@@ -290,9 +290,10 @@ app.use('/uploads/pdfs', authenticateToken, async (req: Request, res: Response, 
     }
 
     try {
-        const courseAccess = req.user!.role === 'STUDENT'
-            ? { enrollments: { some: { userId: req.user!.id, enrollmentRole: 'STUDENT' as const } } }
-            : { teacherAssignments: { some: { userId: req.user!.id } } };
+        const enrollmentRole = req.user!.role === 'STUDENT' ? 'STUDENT' as const : 'TEACHER' as const;
+        const courseAccess = {
+            enrollments: { some: { userId: req.user!.id, enrollmentRole } }
+        };
 
         const [moduleReference, courseReference] = await Promise.all([
             database.module.findFirst({

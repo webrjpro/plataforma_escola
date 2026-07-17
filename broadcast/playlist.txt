@@ -1,3 +1,0 @@
-# Um nome de arquivo por linha, relativo a /app/uploads/videos no backend.
-# Exemplo:
-# video-aula-institucional.mp4

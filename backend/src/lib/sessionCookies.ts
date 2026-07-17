@@ -3,7 +3,6 @@ import { NextFunction, Request, Response } from 'express';
 
 export const SESSION_COOKIE = 'eduvault_session';
 export const CSRF_COOKIE = 'XSRF-TOKEN';
-export const COOKIE_SESSION_MARKER = 'cookie-session';
 const DEFAULT_TTL_HOURS = 8;
 
 function parseCookies(header?: string): Record<string, string> {
@@ -45,11 +44,9 @@ export function sessionTokenFromRequest(req: Request): string | null {
     const cookieToken = sessionCookieFromRequest(req);
     const bearerToken = bearerTokenFromHeader(req.headers.authorization);
 
-    // Um Authorization explícito é a credencial escolhida pelo cliente de
-    // integração. O marcador usado pelo SPA nunca substitui o JWT HttpOnly.
-    if (bearerToken && bearerToken !== COOKIE_SESSION_MARKER) return bearerToken;
-    if (cookieToken) return cookieToken;
-    return bearerToken;
+    // Um Authorization explícito é a credencial escolhida por clientes de
+    // integração; o SPA usa somente o cookie HttpOnly.
+    return bearerToken || cookieToken;
 }
 
 export function bearerTokenFromHeader(header?: string): string | null {
@@ -117,7 +114,7 @@ export function requireCsrf(req: Request, res: Response, next: NextFunction): vo
 
     const cookies = parseCookies(req.headers.cookie);
     const bearerToken = bearerTokenFromHeader(req.headers.authorization);
-    if (!cookies[SESSION_COOKIE] || (bearerToken && bearerToken !== COOKIE_SESSION_MARKER)) {
+    if (!cookies[SESSION_COOKIE] || bearerToken) {
         // Clientes de integração que usam Bearer continuam suportados.
         next();
         return;

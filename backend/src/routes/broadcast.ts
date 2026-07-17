@@ -128,7 +128,9 @@ adminBroadcastRouter.get('/programs', asyncRoute(async (_req, res) => {
 adminBroadcastRouter.post('/upload-video', uploadVideo.single('video'), async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (!req.file) throw new BroadcastHttpError(400, 'Nenhum vídeo enviado.');
-        await validateUploadedVideo(req.file.path);
+        if (!await validateUploadedVideo(req.file.path)) {
+            throw new BroadcastHttpError(400, 'O arquivo enviado não contém um vídeo válido.');
+        }
         const r2Url = await uploadFileToStorage(req.file.path, 'videos/broadcast', req.file.filename, req.file.mimetype);
         await removeUploadedFile(req.file.path);
         res.json({ url: r2Url });

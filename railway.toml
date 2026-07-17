@@ -5,6 +5,7 @@ watchPatterns = [
   "backend/**",
   "frontend/**",
   "deploy/**",
+  ".dockerignore",
   "Dockerfile",
   "railway.toml"
 ]
