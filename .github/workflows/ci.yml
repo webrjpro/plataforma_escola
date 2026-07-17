@@ -27,6 +27,8 @@ jobs:
             frontend/package-lock.json
       - run: npm ci --prefix backend
       - run: npm ci --prefix frontend
+      - name: Generate Prisma client
+        run: npx --prefix backend prisma generate --schema backend/prisma/schema.prisma
       - name: Backend typecheck
         run: npm run typecheck --prefix backend
       - name: Validate Prisma schema
@@ -81,6 +83,8 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - run: npm ci --prefix backend
+      - name: Generate Prisma client
+        run: npx --prefix backend prisma generate --schema backend/prisma/schema.prisma
       - name: Apply migrations to empty PostgreSQL
         run: npx --prefix backend prisma migrate deploy --schema backend/prisma/schema.prisma
         env:
