@@ -161,7 +161,9 @@ if (options.requestLogging ?? true) {
             res.setHeader('X-Request-ID', requestId);
             return requestId;
         },
-        autoLogging: { ignore: (req) => (req.url === '/' || req.url === '/api/metrics') }
+        autoLogging: {
+            ignore: (req) => ['/', '/api/metrics', '/health/live', '/health/ready'].includes(req.url || '')
+        }
     }));
 }
 app.use('/api', requireCsrf);

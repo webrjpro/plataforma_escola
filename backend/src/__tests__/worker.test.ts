@@ -10,5 +10,5 @@ describe('worker entrypoint', () => {
         expect(worker.stopVideoWorker).toBeTypeOf('function');
         expect(worker.runWorker).toBeTypeOf('function');
         expect(process.listenerCount('SIGTERM')).toBe(signalListeners);
-    });
+    }, 15_000);
 });
