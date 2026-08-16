@@ -1,4 +1,4 @@
-FROM node:22.18.0-alpine3.22 AS frontend-build
+FROM node:26.3.0-alpine3.22 AS frontend-build
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm ci
@@ -6,14 +6,14 @@ COPY frontend/ ./
 # Ignore env vars for build time, we can handle dynamic config via window.CONFIG or relative paths
 RUN npm run build
 
-FROM node:22.18.0-alpine3.22 AS backend-build
+FROM node:26.3.0-alpine3.22 AS backend-build
 WORKDIR /app/backend
 COPY backend/package*.json ./
 RUN npm ci
 COPY backend/ ./
 RUN npx prisma generate && npm run build && npm prune --omit=dev
 
-FROM node:22.18.0-alpine3.22 AS runtime
+FROM node:26.3.0-alpine3.22 AS runtime
 ENV NODE_ENV=production \
     PORT=8080 \
     API_PORT=4000 \
